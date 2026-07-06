@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-signin-client_id" content="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com">
+  <title>掲示板アプリ</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/js/appleid.js"></script>
+  <style>
+    body {
+      font-family: "Yu Gothic", "Meiryo", sans-serif;
+      margin: 0;
+      background: #f4f7fb;
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 24px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #2563eb;
+    }
+
+    .auth-box, .board-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      background: #fafafa;
+    }
+
+    form {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .status {
+      margin-bottom: 20px;
+      color: #2563eb;
+      font-size: 14px;
+    }
+
+    .user-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .settings-box {
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: white;
+    }
+
+    input, textarea, button {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .secondary {
+      background: #6b7280;
+    }
+
+    .secondary:hover {
+      background: #4b5563;
+    }
+
+    .toggle-link {
+      color: #2563eb;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .post {
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      background: white;
+    }
+
+    .post-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .like-btn {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    .like-btn:hover {
+      background: #bae6fd;
+    }
+
+    .reply-box {
+      margin-top: 12px;
+      padding: 10px;
+      border-left: 3px solid #2563eb;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .reply-list {
+      margin-top: 8px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .reply-item {
+      padding: 8px 10px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+
+    .tiny-btn {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+
+    .danger-btn {
+      background: #dc2626;
+    }
+
+    .danger-btn:hover {
+      background: #b91c1c;
+    }
+
+    .edit-textarea {
+      width: 100%;
+      min-height: 80px;
+      box-sizing: border-box;
+      margin-top: 8px;
+    }
+
+    .post-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .post p {
+      margin: 0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>掲示板</h1>
+
+    <div id="authArea" class="auth-box">
+      <div id="authStatus" class="status"></div>
+
+      <div id="loginView">
+        <h2>ログイン</h2>
+        <form id="loginForm">
+          <input type="text" id="loginUsername" placeholder="ユーザー名" required />
+          <input type="password" id="loginPassword" placeholder="パスワード" required />
+          <button type="submit">ログイン</button>
+        </form>
+        <div style="text-align: center; margin: 16px 0;">
+          <p>または</p>
+          <div id="googleLoginButton" style="display: flex; justify-content: center;"></div>
+          <div id="appleLoginButton" style="display: flex; justify-content: center; margin-top: 8px;"></div>
+        </div>
+        <p>アカウントをお持ちでない方は <span id="showRegisterLink" class="toggle-link">新規登録</span></p>
+      </div>
+
+      <div id="registerView" class="hidden">
+        <h2>アカウント登録</h2>
+        <form id="registerForm">
+          <input type="text" id="registerUsername" placeholder="ユーザー名" required />
+          <input type="password" id="registerPassword" placeholder="パスワード" required />
+          <button type="submit">登録する</button>
+        </form>
+        <div style="text-align: center; margin: 16px 0;">
+          <p>または</p>
+          <div id="googleRegisterButton" style="display: flex; justify-content: center;"></div>
+          <div id="appleRegisterButton" style="display: flex; justify-content: center; margin-top: 8px;"></div>
+        </div>
+        <p>すでにアカウントをお持ちの方は <span id="showLoginLink" class="toggle-link">ログイン</span></p>
+      </div>
+    </div>
+
+    <div id="boardArea" class="board-box hidden">
+      <div class="user-bar">
+        <strong id="currentUser">未ログイン</strong>
+        <button id="logoutBtn" class="secondary" type="button">ログアウト</button>
+      </div>
+
+      <div class="settings-box">
+        <button id="settingsToggleBtn" class="secondary" type="button">アカウント設定</button>
+        <div id="settingsPanel" class="hidden" style="margin-top: 12px;">
+          <form id="settingsForm">
+            <input type="text" id="settingsUsername" placeholder="新しいユーザー名" />
+            <input type="password" id="settingsCurrentPassword" placeholder="現在のパスワード" required />
+            <input type="password" id="settingsNewPassword" placeholder="新しいパスワード（任意）" />
+            <button type="submit">更新する</button>
+          </form>
+        </div>
+      </div>
+
+      <form id="postForm">
+        <textarea id="messageInput" placeholder="メッセージを入力してください" required></textarea>
+        <button type="submit">投稿する</button>
+      </form>
+      <div id="status" class="status"></div>
+      <div id="posts"></div>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const postForm = document.getElementById('postForm');
+    const messageInput = document.getElementById('messageInput');
+    const postsDiv = document.getElementById('posts');
+    const statusDiv = document.getElementById('status');
+    const authStatusDiv = document.getElementById('authStatus');
+    const authArea = document.getElementById('authArea');
+    const boardArea = document.getElementById('boardArea');
+    const loginView = document.getElementById('loginView');
+    const registerView = document.getElementById('registerView');
+    const currentUserEl = document.getElementById('currentUser');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsForm = document.getElementById('settingsForm');
+    const settingsUsername = document.getElementById('settingsUsername');
+    const settingsCurrentPassword = document.getElementById('settingsCurrentPassword');
+    const settingsNewPassword = document.getElementById('settingsNewPassword');
+    const showRegisterLink = document.getElementById('showRegisterLink');
+    const showLoginLink = document.getElementById('showLoginLink');
+    const googleLoginButton = document.getElementById('googleLoginButton');
+    const googleRegisterButton = document.getElementById('googleRegisterButton');
+    const appleLoginButton = document.getElementById('appleLoginButton');
+    const appleRegisterButton = document.getElementById('appleRegisterButton');
+
+    let currentUser = '';
+    let googleInitialized = false;
+    let token = localStorage.getItem('boardToken') || '';
+    let lastPostsSignature = '';
+
+    function showAuthStatus(message) {
+      authStatusDiv.textContent = message;
+    }
+
+    function showBoardStatus(message) {
+      statusDiv.textContent = message;
+    }
+
+    async function readJsonResponse(response) {
+      const text = await response.text();
+      if (!text) {
+        return {};
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { success: false, error: text };
+      }
+    }
+
+    function showAuth() {
+      authArea.classList.remove('hidden');
+      boardArea.classList.add('hidden');
+    }
+
+    function showBoard() {
+      authArea.classList.add('hidden');
+      boardArea.classList.remove('hidden');
+      currentUserEl.textContent = `ログイン中: ${currentUser}`;
+    }
+
+    function saveSession(newToken, username) {
+      token = newToken;
+      currentUser = username;
+      localStorage.setItem('boardToken', token);
+      localStorage.setItem('boardUser', username);
+    }
+
+    function clearSession() {
+      token = '';
+      currentUser = '';
+      localStorage.removeItem('boardToken');
+      localStorage.removeItem('boardUser');
+    }
+
+
+
+    async function restoreSession() {
+      if (!token) {
+        showAuth();
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          throw new Error('session invalid');
+        }
+
+        const data = await readJsonResponse(response);
+        currentUser = data.username;
+        showBoard();
+        await loadPosts();
+        setInterval(() => loadPosts({ silent: true }), 2000);
+      } catch (error) {
+        clearSession();
+        showAuth();
+        showAuthStatus('ログイン情報が無効でした。もう一度ログインしてください。');
+      }
+    }
+
+    async function loadPosts(options = {}) {
+      try {
+        const response = await fetch('/api/posts', {
+          cache: 'no-store',
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+
+        if (!response.ok) {
+          throw new Error('post load failed');
+        }
+
+        const posts = await readJsonResponse(response);
+        const signature = JSON.stringify(posts);
+
+        if (signature !== lastPostsSignature) {
+          lastPostsSignature = signature;
+          renderPosts(posts);
+        }
+
+        if (!options.silent) {
+          showBoardStatus('自動更新中です。');
+        }
+      } catch (error) {
+        showBoardStatus('投稿の読み込みに失敗しました。');
+        console.error(error);
+      }
+    }
+
+    function renderPosts(posts) {
+      postsDiv.innerHTML = '';
+
+      if (posts.length === 0) {
+        postsDiv.innerHTML = '<p>まだ投稿はありません。</p>';
+        return;
+      }
+
+      posts.slice().reverse().forEach(post => {
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.dataset.postId = post.id;
+        div.innerHTML = `
+          <div class="post-header">
+            <strong>${escapeHtml(post.name)}</strong>
+            <span>${escapeHtml(post.time)}</span>
+          </div>
+          <p class="post-message">${escapeHtml(post.message)}</p>
+          <div class="post-actions">
+            <button class="tiny-btn like-btn" data-action="like" data-id="${post.id}" type="button">👍 ${post.likes || 0}</button>
+            <button class="tiny-btn" data-action="reply" data-id="${post.id}" type="button">返信</button>
+            ${post.name === currentUser ? `
+              <button class="tiny-btn" data-action="edit" data-id="${post.id}" type="button">編集</button>
+              <button class="tiny-btn danger-btn" data-action="delete" data-id="${post.id}" type="button">削除</button>
+            ` : ''}
+          </div>
+          <div class="reply-box">
+            <strong>返信</strong>
+            <div class="reply-list">
+              ${(post.replies || []).map(reply => `
+                <div class="reply-item">
+                  <div class="post-header" style="margin-bottom: 4px;">
+                    <strong>${escapeHtml(reply.name)}</strong>
+                    <span>${escapeHtml(reply.time)}</span>
+                  </div>
+                  <div>${escapeHtml(reply.message)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        const editBtn = div.querySelector('[data-action="edit"]');
+        const deleteBtn = div.querySelector('[data-action="delete"]');
+        const replyBtn = div.querySelector('[data-action="reply"]');
+        const likeBtn = div.querySelector('[data-action="like"]');
+
+        editBtn?.addEventListener('click', () => startEditPost(post));
+        deleteBtn?.addEventListener('click', () => deletePost(post.id));
+        replyBtn?.addEventListener('click', () => startReplyPost(post));
+        likeBtn?.addEventListener('click', () => likePost(post.id));
+
+        postsDiv.appendChild(div);
+      });
+    }
+
+    function startEditPost(post) {
+      const target = postsDiv.querySelector(`[data-post-id="${post.id}"]`);
+      if (!target) return;
+
+      target.innerHTML = `
+        <div class="post-header">
+          <strong>${escapeHtml(post.name)}</strong>
+          <span>${escapeHtml(post.time)}</span>
+        </div>
+        <textarea class="edit-textarea" id="edit-${post.id}">${escapeHtml(post.message)}</textarea>
+        <div class="post-actions">
+          <button class="tiny-btn" data-action="save" data-id="${post.id}" type="button">保存</button>
+          <button class="tiny-btn secondary" data-action="cancel" data-id="${post.id}" type="button">キャンセル</button>
+        </div>
+      `;
+
+      target.querySelector('[data-action="save"]').addEventListener('click', () => saveEditedPost(post.id));
+      target.querySelector('[data-action="cancel"]').addEventListener('click', () => loadPosts({ silent: true }));
+    }
+
+    function startReplyPost(post) {
+      const target = postsDiv.querySelector(`[data-post-id="${post.id}"]`);
+      if (!target) return;
+
+      target.innerHTML = `
+        <div class="post-header">
+          <strong>${escapeHtml(post.name)}</strong>
+          <span>${escapeHtml(post.time)}</span>
+        </div>
+        <p class="post-message">${escapeHtml(post.message)}</p>
+        <div class="reply-box">
+          <textarea class="edit-textarea" id="reply-${post.id}" placeholder="返信を入力してください"></textarea>
+          <div class="post-actions">
+            <button class="tiny-btn" data-action="send-reply" data-id="${post.id}" type="button">送信</button>
+            <button class="tiny-btn secondary" data-action="cancel-reply" data-id="${post.id}" type="button">キャンセル</button>
+          </div>
+        </div>
+      `;
+
+      target.querySelector('[data-action="send-reply"]').addEventListener('click', () => saveReply(post.id));
+      target.querySelector('[data-action="cancel-reply"]').addEventListener('click', () => loadPosts({ silent: true }));
+    }
+
+    async function saveReply(postId) {
+      const target = postsDiv.querySelector(`[data-post-id="${postId}"]`);
+      const textarea = target?.querySelector('textarea');
+      const message = textarea?.value.trim();
+
+      if (!message) {
+        showBoardStatus('返信内容を入力してください。');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/posts/${postId}/reply`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await readJsonResponse(response);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || '返信に失敗しました。');
+        }
+
+        await loadPosts({ silent: true });
+        showBoardStatus('返信しました。');
+      } catch (error) {
+        showBoardStatus(error.message);
+        console.error(error);
+      }
+    }
+
+    async function likePost(postId) {
+      try {
+        const response = await fetch(`/api/posts/${postId}/like`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await readJsonResponse(response);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'いいねに失敗しました。');
+        }
+
+        await loadPosts({ silent: true });
+        showBoardStatus('いいねしました。');
+      } catch (error) {
+        showBoardStatus(error.message);
+        console.error(error);
+      }
+    }
+
+    async function saveEditedPost(postId) {
+      const target = postsDiv.querySelector(`[data-post-id="${postId}"]`);
+      const textarea = target?.querySelector('textarea');
+      const message = textarea?.value.trim();
+
+      if (!message) {
+        showBoardStatus('編集内容を入力してください。');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/posts/${postId}/edit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await readJsonResponse(response);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || '編集に失敗しました。');
+        }
+
+        await loadPosts({ silent: true });
+        showBoardStatus('投稿を編集しました。');
+      } catch (error) {
+        showBoardStatus(error.message);
+        console.error(error);
+      }
+    }
+
+    async function deletePost(postId) {
+      if (!window.confirm('この投稿を削除しますか？')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/posts/${postId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await readJsonResponse(response);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || '削除に失敗しました。');
+        }
+
+        await loadPosts({ silent: true });
+        showBoardStatus('投稿を削除しました。');
+      } catch (error) {
+        showBoardStatus(error.message);
+        console.error(error);
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function submitAuth(event, mode) {
+      event.preventDefault();
+      const usernameInput = mode === 'login'
+        ? document.getElementById('loginUsername')
+        : document.getElementById('registerUsername');
+      const passwordInput = mode === 'login'
+        ? document.getElementById('loginPassword')
+        : document.getElementById('registerPassword');
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!username || !password) {
+        showAuthStatus('ユーザー名とパスワードを入力してください。');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/${mode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await readJsonResponse(response);
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || '認証に失敗しました');
+        }
+
+        saveSession(data.token, data.username);
+        showBoard();
+        showBoardStatus('ログインしました。');
+        await loadPosts();
+        usernameInput.value = '';
+        passwordInput.value = '';
+      } catch (error) {
+        showAuthStatus(error.message);
+      }
+    }
+
+    async function handleAppleCallback(response) {
+      try {
+        const idToken = response.authorization.id_token;
+        const user = response.user;
+        
+        const resp = await fetch('/api/apple-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken, user })
+        });
+
+        const data = await readJsonResponse(resp);
+        if (!resp.ok || !data.success) {
+          throw new Error(data.error || 'Apple ログインに失敗しました');
+        }
+
+        saveSession(data.token, data.username);
+        showBoard();
+        showBoardStatus('Apple ID アカウントでログインしました。');
+        await loadPosts();
+      } catch (error) {
+        showAuthStatus(error.message);
+      }
+    }
+
+    function initializeAppleSignIn() {
+      if (!window.AppleID) {
+        console.warn('Apple ID SDK is not loaded yet');
+        return;
+      }
+
+      try {
+        AppleID.auth.init({
+          clientId: 'YOUR_APPLE_SERVICE_ID',
+          teamId: 'YOUR_APPLE_TEAM_ID',
+          redirectURI: 'http://localhost:3000',
+          scope: 'email name',
+          redirectMethod: 'form',
+          usePopup: true
+        });
+
+        if (appleLoginButton && !appleLoginButton.innerHTML) {
+          AppleID.auth.renderButton({
+            width: 280,
+            height: 40,
+            scope: 'email name',
+            buttonMode: 'signin',
+            buttonType: 'black',
+            locale: 'ja_JP',
+            onSuccess: handleAppleCallback,
+            onError: (error) => showAuthStatus('Apple ログインエラー: ' + error.error)
+          });
+        }
+      } catch (error) {
+        console.error('Apple Sign In を初期化できません:', error);
+      }
+    }
+
+    async function handleGoogleCallback(response) {
+
+      try {
+        const idToken = response.credential;
+        const resp = await fetch('/api/google-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+
+        const data = await readJsonResponse(resp);
+        if (!resp.ok || !data.success) {
+          throw new Error(data.error || 'Google ログインに失敗しました');
+        }
+
+        saveSession(data.token, data.username);
+        showBoard();
+        showBoardStatus('Google アカウントでログインしました。');
+        await loadPosts();
+      } catch (error) {
+        showAuthStatus(error.message);
+      }
+    }
+
+    function initializeGoogleSignIn() {
+      if (!window.google || googleInitialized) return;
+
+      try {
+        google.accounts.id.initialize({
+          client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+          callback: handleGoogleCallback
+        });
+
+        google.accounts.id.renderButton(
+          googleLoginButton,
+          { theme: 'outline', size: 'large', text: 'signin_with' }
+        );
+
+        google.accounts.id.renderButton(
+          googleRegisterButton,
+          { theme: 'outline', size: 'large', text: 'signup_with' }
+        );
+
+        googleInitialized = true;
+      } catch (error) {
+        console.error('Google サインインを初期化できません:', error);
+      }
+    }
+
+    switchView = (mode) => {
+      if (mode === 'register') {
+        loginView.classList.add('hidden');
+        registerView.classList.remove('hidden');
+      } else {
+        loginView.classList.remove('hidden');
+        registerView.classList.add('hidden');
+      }
+      setTimeout(() => {
+        initializeGoogleSignIn();
+        initializeAppleSignIn();
+      }, 100);
+    };
+
+    loginForm.addEventListener('submit', event => submitAuth(event, 'login'));
+    registerForm.addEventListener('submit', event => submitAuth(event, 'register'));
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        initializeGoogleSignIn();
+        initializeAppleSignIn();
+      }, 500);
+    });
+
+    settingsToggleBtn.addEventListener('click', () => {
+      settingsPanel.classList.toggle('hidden');
+    });
+
+    settingsForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const newUsername = settingsUsername.value.trim();
+      const currentPassword = settingsCurrentPassword.value.trim();
+      const newPassword = settingsNewPassword.value.trim();
+
+      if (!currentPassword) {
+        showBoardStatus('現在のパスワードを入力してください。');
+        return;
+      }
+
+      if (!newUsername && !newPassword) {
+        showBoardStatus('ユーザー名または新しいパスワードを入力してください。');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/account/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            username: newUsername || undefined,
+            currentPassword,
+            newPassword: newPassword || undefined
+          })
+        });
+
+        const data = await readJsonResponse(response);
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'アカウント設定の更新に失敗しました。');
+        }
+
+        currentUser = data.username;
+        localStorage.setItem('boardUser', currentUser);
+        currentUserEl.textContent = `ログイン中: ${currentUser}`;
+        settingsForm.reset();
+        settingsPanel.classList.add('hidden');
+        showBoardStatus('アカウント設定を更新しました。');
+      } catch (error) {
+        showBoardStatus(error.message);
+        console.error(error);
+      }
+    });
+
+    postForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      showBoardStatus('投稿しています...');
+
+      try {
+        const response = await fetch('/api/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            message,
+            time: new Date().toLocaleString('ja-JP')
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('投稿に失敗しました');
+        }
+
+        postForm.reset();
+        messageInput.focus();
+        await loadPosts({ silent: true });
+        showBoardStatus('投稿しました。');
+      } catch (error) {
+        showBoardStatus(error.message);
+        console.error(error);
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      clearSession();
+      showAuth();
+      switchView('login');
+      showAuthStatus('ログアウトしました。');
+    });
+
+    showRegisterLink.addEventListener('click', () => switchView('register'));
+    showLoginLink.addEventListener('click', () => switchView('login'));
+
+    restoreSession();
+  </script>
+</body>
+</html>
